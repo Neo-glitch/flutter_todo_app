@@ -131,7 +131,7 @@ class AddNewTaskModel extends StatelessWidget {
                   ),
                   padding: const EdgeInsets.symmetric(vertical: 14),
                 ),
-                child: Text("Cancel"),
+                child: Text("Create"),
               )),
             ],
           )
