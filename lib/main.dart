@@ -1,14 +1,21 @@
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/widgets.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_todo_app/common/show_model.dart';
+import 'package:flutter_todo_app/widget/card_todo_widget.dart';
 import 'package:gap/gap.dart';
 
 void main() {
-  runApp(MaterialApp(
-    debugShowCheckedModeBanner: false,
-    theme: ThemeData().copyWith(),
-    home: const HomePage(),
-  ));
+  runApp(
+    ProviderScope(
+      child: MaterialApp(
+        debugShowCheckedModeBanner: false,
+        theme: ThemeData().copyWith(),
+        home: const HomePage(),
+      ),
+    ),
+  );
 }
 
 class HomePage extends StatelessWidget {
@@ -111,8 +118,21 @@ class HomePage extends StatelessWidget {
                         borderRadius: BorderRadius.circular(16),
                       ),
                     ),
-                  )
+                  ),
                 ],
+              ),
+              Gap(20),
+
+              // Card List task
+              ListView.separated(
+                itemCount: 3,
+                shrinkWrap: true,
+                separatorBuilder: (context, index) => const SizedBox(
+                  height: 10,
+                ),
+                itemBuilder: (context, index) {
+                  return CardTodoListWidget();
+                },
               )
             ],
           ),
