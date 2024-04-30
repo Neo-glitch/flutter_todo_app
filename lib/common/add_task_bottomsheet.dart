@@ -4,24 +4,34 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_todo_app/model/todo_model.dart';
 import 'package:flutter_todo_app/provider/date_time_provider.dart';
 import 'package:flutter_todo_app/provider/radio_provider.dart';
+import 'package:flutter_todo_app/provider/service_provider.dart';
 import 'package:flutter_todo_app/widget/date_time_widget.dart';
 import 'package:flutter_todo_app/widget/radio_widget.dart';
 import 'package:flutter_todo_app/widget/textfield_widget.dart';
 import 'package:flutter_todo_app/constants/app_style.dart';
+import 'package:fluttertoast/fluttertoast.dart';
 import 'package:gap/gap.dart';
 import 'package:intl/intl.dart';
 
 /**
  * Bottom sheet for adding new task
  */
-class AddNewTaskModel extends ConsumerWidget {
-  const AddNewTaskModel({
-    super.key,
-  });
+class AddNewTaskModel extends ConsumerStatefulWidget {
+  const AddNewTaskModel({Key? key}) : super(key: key);
 
-  void showDatePickerDialog(BuildContext context, WidgetRef ref) async {
+  @override
+  _AddNewTaskModelState createState() => _AddNewTaskModelState();
+}
+
+class _AddNewTaskModelState extends ConsumerState<AddNewTaskModel> {
+  final titleController = TextEditingController();
+  final descriptionController = TextEditingController();
+  bool isLoading = false;
+
+  void showDatePickerDialog(BuildContext context) async {
     final result = await showDatePicker(
       context: context,
       initialDate: DateTime.now(),
@@ -35,7 +45,7 @@ class AddNewTaskModel extends ConsumerWidget {
     }
   }
 
-  void showTimePickerDialog(BuildContext context, WidgetRef ref) async {
+  void showTimePickerDialog(BuildContext context) async {
     final result =
         await showTimePicker(context: context, initialTime: TimeOfDay.now());
 
@@ -46,8 +56,81 @@ class AddNewTaskModel extends ConsumerWidget {
     }
   }
 
+  void createTask() async {
+    final radioValue = ref.read(radioProvider);
+    final date = ref.read(dateProvider);
+    final time = ref.read(timeProvider);
+    String title = titleController.text;
+    String description = descriptionController.text;
+    String category = "";
+
+    switch (radioValue) {
+      case 1:
+        category = "Learning";
+        break;
+      case 2:
+        category = "Working";
+        break;
+      case 3:
+        category = "General";
+        break;
+    }
+
+    if (title.isEmpty) {
+      showToast("Task must have a title");
+      return;
+    } else if (description.isEmpty) {
+      showToast("Task must have a description");
+      return;
+    } else if (category.isEmpty) {
+      showToast("Task must have a category");
+      return;
+    } else if (date == "dd/mm/yy") {
+      showToast("Task must have a selected start date");
+      return;
+    } else if (time == "hh : mm") {
+      showToast("Task must have a selected start time");
+      return;
+    }
+
+    updateLoadState(true);
+
+    try {
+      await ref.read(serviceProvider).addNewTask(TodoModel(
+          title: title,
+          description: description,
+          category: category,
+          date: date,
+          time: time,
+          isDone: false));
+      showToast("Task Added Successfully");
+
+      if (context.mounted) {
+        Navigator.pop(context);
+      }
+    } catch (error) {
+      showToast("Failed to add Task: ${error.toString()}");
+    } finally {
+      updateLoadState(false);
+    }
+    // Todo add a kinda loader effect to the create button and listen for complete or failed
+  }
+
+  void showToast(String message) {
+    Fluttertoast.showToast(
+      msg: message,
+      toastLength: Toast.LENGTH_SHORT,
+    );
+  }
+
+  void updateLoadState(bool isLoading) {
+    setState(() {
+      this.isLoading = isLoading;
+    });
+  }
+
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  Widget build(BuildContext context) {
     final dateProv = ref.watch(dateProvider);
     return Container(
       padding: const EdgeInsets.all(30),
@@ -77,14 +160,19 @@ class AddNewTaskModel extends ConsumerWidget {
           const Gap(12),
           const Text("Title Task", style: AppStyle.headingOne),
           const Gap(6),
-          const TextFieldWidget(
+          TextFieldWidget(
             hintText: "Add Task Name",
             maxLines: 1,
+            valueController: titleController,
           ),
           const Gap(12),
           const Text("Description", style: AppStyle.headingOne),
           const Gap(6),
-          const TextFieldWidget(hintText: "Add Decriptions", maxLines: 3),
+          TextFieldWidget(
+            hintText: "Add Decriptions",
+            maxLines: 2,
+            valueController: descriptionController,
+          ),
           const Gap(12),
           const Text("Category", style: AppStyle.headingOne),
           const Gap(6),
@@ -132,7 +220,7 @@ class AddNewTaskModel extends ConsumerWidget {
                 valueText: dateProv,
                 iconData: CupertinoIcons.calendar,
                 onTap: () {
-                  showDatePickerDialog(context, ref);
+                  showDatePickerDialog(context);
                 },
               ),
               const Gap(22),
@@ -141,7 +229,7 @@ class AddNewTaskModel extends ConsumerWidget {
                 valueText: ref.watch(timeProvider),
                 iconData: CupertinoIcons.time,
                 onTap: () {
-                  showTimePickerDialog(context, ref);
+                  showTimePickerDialog(context);
                 },
               ),
             ],
@@ -153,33 +241,37 @@ class AddNewTaskModel extends ConsumerWidget {
             children: [
               Expanded(
                   child: ElevatedButton(
-                onPressed: () => Navigator.pop(context),
+                onPressed: () => isLoading ? null : Navigator.pop(context),
                 style: ElevatedButton.styleFrom(
                   elevation: 0,
-                  backgroundColor: Colors.white,
-                  foregroundColor: Colors.blue.shade800,
+                  backgroundColor: Colors.white.withOpacity(1),
+                  foregroundColor:
+                      Colors.blue.shade800.withOpacity(isLoading ? .4 : 1),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(6),
                   ),
                   side: BorderSide(color: Colors.blue.shade800),
                   padding: const EdgeInsets.symmetric(vertical: 14),
                 ),
-                child: Text("Cancel"),
+                child: Text(isLoading ? "Loading..." : "Cancel"),
               )),
               Gap(20),
               Expanded(
                   child: ElevatedButton(
-                onPressed: () {},
+                onPressed: () {
+                  isLoading ? null : createTask();
+                },
                 style: ElevatedButton.styleFrom(
                   elevation: 0,
-                  backgroundColor: Colors.blue.shade800,
+                  backgroundColor:
+                      Colors.blue.shade800.withOpacity(isLoading ? .4 : 1),
                   foregroundColor: Colors.white,
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(6),
                   ),
                   padding: const EdgeInsets.symmetric(vertical: 14),
                 ),
-                child: Text("Create"),
+                child: Text(isLoading ? "Loading..." : "Create"),
               )),
             ],
           )
