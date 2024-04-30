@@ -1,13 +1,32 @@
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_todo_app/model/todo_model.dart';
+import 'package:flutter_todo_app/provider/service_provider.dart';
 
-class CardTodoListWidget extends StatelessWidget {
+class CardTodoListWidget extends ConsumerWidget {
   const CardTodoListWidget({
     super.key,
+    required this.todoModel,
   });
 
+  final TodoModel todoModel;
+
+  Color getCategoryColor() {
+    switch (todoModel.category) {
+      case 'Learning':
+        return Colors.green;
+      case 'Working':
+        return Colors.blue.shade700;
+      case "General":
+        return Colors.amberAccent.shade700;
+      default:
+        return Colors.white;
+    }
+  }
+
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     return Container(
       width: double.infinity,
       height: 120,
@@ -19,8 +38,8 @@ class CardTodoListWidget extends StatelessWidget {
         children: [
           Container(
             decoration: BoxDecoration(
-              color: Colors.red,
-              borderRadius: BorderRadius.only(
+              color: getCategoryColor(),
+              borderRadius: const BorderRadius.only(
                 topLeft: Radius.circular(12),
                 bottomLeft: Radius.circular(12),
               ),
@@ -38,15 +57,41 @@ class CardTodoListWidget extends StatelessWidget {
                 children: [
                   ListTile(
                     contentPadding: EdgeInsets.zero,
-                    title: Text("Leading Flutter Developer"),
-                    subtitle: Text("Learning about riverpod and Bloc"),
+                    leading: IconButton(
+                      onPressed: () {
+                        ref.read(serviceProvider).deleteTask(todoModel.docId!);
+                      },
+                      icon: Icon(CupertinoIcons.delete),
+                    ),
+                    title: Text(
+                      todoModel.title,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                          decoration: todoModel.isDone
+                              ? TextDecoration.lineThrough
+                              : null),
+                    ),
+                    subtitle: Text(
+                      todoModel.description,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                          decoration: todoModel.isDone
+                              ? TextDecoration.lineThrough
+                              : null),
+                    ),
                     trailing: Transform.scale(
                       scale: 1.1,
                       child: Checkbox(
                         activeColor: Colors.blue.shade800,
                         shape: const CircleBorder(),
-                        value: true,
-                        onChanged: (value) {},
+                        value: todoModel.isDone,
+                        onChanged: (value) {
+                          ref
+                              .read(serviceProvider)
+                              .toggleTaskCheckState(todoModel.docId!, value);
+                        },
                       ),
                     ),
                   ),
@@ -61,7 +106,7 @@ class CardTodoListWidget extends StatelessWidget {
                         Row(
                           children: [
                             Text("Today - "),
-                            Text("09:15PM - 11:45PM"),
+                            Text(todoModel.time),
                           ],
                         )
                       ],
